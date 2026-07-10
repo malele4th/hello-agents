@@ -140,12 +140,25 @@ class OpenAICompatibleClient:
 
 import re
 
-# --- 1. 配置LLM客户端 ---
-# 请根据您使用的服务，将这里替换成对应的凭证和地址
-API_KEY = "YOUR_API_KEY"
-BASE_URL = "YOUR_BASE_URL"
-MODEL_ID = "YOUR_MODEL_ID"
-os.environ['TAVILY_API_KEY'] = "YOUR_TAVILY_API_KEY"
+# --- 1. 配置LLM客户端（从环境变量读取，见 ~/.zshrc / CoreCoder .env）---
+API_KEY = os.environ.get("OPENAI_API_KEY")
+BASE_URL = os.environ.get("OPENAI_BASE_URL")
+MODEL_ID = os.environ.get("CORECODER_MODEL")
+TAVILY_API_KEY = os.environ.get("TAVILY_API_KEY")
+
+missing = [
+    name for name, value in [
+        ("OPENAI_API_KEY", API_KEY),
+        ("OPENAI_BASE_URL", BASE_URL),
+        ("CORECODER_MODEL", MODEL_ID),
+        ("TAVILY_API_KEY", TAVILY_API_KEY),
+    ]
+    if not value
+]
+if missing:
+    raise SystemExit(
+        "缺少环境变量: " + ", ".join(missing) + "。请检查 ~/.zshrc 或重新打开终端。"
+    )
 
 llm = OpenAICompatibleClient(
     model=MODEL_ID,
@@ -154,7 +167,8 @@ llm = OpenAICompatibleClient(
 )
 
 # --- 2. 初始化 ---
-user_prompt = "你好，请帮我查询一下今天北京的天气，然后根据天气推荐一个合适的旅游景点。"
+# user_prompt = "你好，请帮我查询一下今天北京的天气，然后根据天气推荐一个合适的旅游景点。"
+user_prompt = "你好，请帮我查询一下今年 7/11-7/14日 青岛的天气，然后根据天气帮我做一个青岛的4天3晚的旅游攻略。"
 prompt_history = [f"用户请求: {user_prompt}"]
 
 print(f"用户输入: {user_prompt}\n" + "="*40)
@@ -189,12 +203,28 @@ for i in range(5): # 设置最大循环次数
     action_str = action_match.group(1).strip()
 
     if action_str.startswith("Finish"):
-        final_answer = re.match(r"Finish\[(.*)\]", action_str).group(1)
+        finish_match = re.match(r"Finish\[(.*)\]", action_str, re.DOTALL)
+        if not finish_match:
+            observation = "错误: Finish 格式无效，请使用 Finish[最终答案]。"
+            observation_str = f"Observation: {observation}"
+            print(f"{observation_str}\n" + "="*40)
+            prompt_history.append(observation_str)
+            continue
+        final_answer = finish_match.group(1).strip()
         print(f"任务完成，最终答案: {final_answer}")
         break
-    
-    tool_name = re.search(r"(\w+)\(", action_str).group(1)
-    args_str = re.search(r"\((.*)\)", action_str).group(1)
+
+    tool_match = re.search(r"(\w+)\(", action_str)
+    args_match = re.search(r"\((.*)\)", action_str, re.DOTALL)
+    if not tool_match or not args_match:
+        observation = "错误: 无法解析工具调用格式，请使用 function_name(arg=\"value\")。"
+        observation_str = f"Observation: {observation}"
+        print(f"{observation_str}\n" + "="*40)
+        prompt_history.append(observation_str)
+        continue
+
+    tool_name = tool_match.group(1)
+    args_str = args_match.group(1)
     kwargs = dict(re.findall(r'(\w+)="([^"]*)"', args_str))
 
     if tool_name in available_tools:
