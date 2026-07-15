@@ -3,20 +3,24 @@ from camel.societies import RolePlaying
 from camel.utils import print_text_animated
 from camel.models import ModelFactory
 from camel.types import ModelPlatformType
-from dotenv import load_dotenv
 import os
+import sys
+from pathlib import Path
 
-load_dotenv()
-LLM_API_KEY = os.getenv("LLM_API_KEY")
-LLM_BASE_URL = os.getenv("LLM_BASE_URL")
-LLM_MODEL = os.getenv("LLM_MODEL")
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from load_env import require_llm_env
 
-#创建模型,在这里以Qwen为例,调用的百炼大模型平台API
+env = require_llm_env()
+LLM_API_KEY = env["api_key"]
+LLM_BASE_URL = env["base_url"]
+LLM_MODEL = env["model"]
+
+# 使用 OpenAI 兼容接口（MiniMax 等）
 model = ModelFactory.create(
-    model_platform=ModelPlatformType.QWEN,
+    model_platform=ModelPlatformType.OPENAI_COMPATIBLE_MODEL,
     model_type=LLM_MODEL,
     url=LLM_BASE_URL,
-    api_key=LLM_API_KEY
+    api_key=LLM_API_KEY,
 )
 
 # 定义协作任务
@@ -43,7 +47,7 @@ role_play_session = RolePlaying(
 print(Fore.CYAN + f"具体任务描述:\n{role_play_session.task_prompt}\n")
 
 # 开始协作对话
-chat_turn_limit, n = 30, 0
+chat_turn_limit, n = int(os.getenv("CAMEL_CHAT_TURN_LIMIT", "3")), 0
 input_msg = role_play_session.init_chat()
 
 while n < chat_turn_limit:

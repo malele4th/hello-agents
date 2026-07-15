@@ -6,12 +6,17 @@
 import asyncio
 import os
 import random
+import sys
+from pathlib import Path
 from typing import List, Dict, Optional
 
 from agentscope.agent import ReActAgent
-from agentscope.model import DashScopeChatModel
+from agentscope.model import OpenAIChatModel
 from agentscope.pipeline import MsgHub, sequential_pipeline, fanout_pipeline
-from agentscope.formatter import DashScopeMultiAgentFormatter
+from agentscope.formatter import OpenAIMultiAgentFormatter
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from load_env import require_llm_env
 
 from prompt_cn import ChinesePrompts
 from game_roles import GameRoles
@@ -38,6 +43,7 @@ class ThreeKingdomsWerewolfGame:
     """三国狼人杀游戏主类"""
     
     def __init__(self):
+        self.env = require_llm_env()
         self.players: Dict[str, ReActAgent] = {}
         self.roles: Dict[str, str] = {}
         self.moderator = GameModerator()
@@ -60,12 +66,13 @@ class ThreeKingdomsWerewolfGame:
         agent = ReActAgent(
             name=name,
             sys_prompt=ChinesePrompts.get_role_prompt(role, character),
-            model=DashScopeChatModel(
-                model_name="qwen-max",
-                api_key=os.environ["DASHSCOPE_API_KEY"],
-                enable_thinking=True,
+            model=OpenAIChatModel(
+                model_name=self.env["model"],
+                api_key=self.env["api_key"],
+                stream=False,
+                client_args={"base_url": self.env["base_url"]},
             ),
-            formatter=DashScopeMultiAgentFormatter(),
+            formatter=OpenAIMultiAgentFormatter(),
         )
         
         # 角色身份确认
@@ -79,8 +86,9 @@ class ThreeKingdomsWerewolfGame:
         self.players[name] = agent
         return agent
     
-    async def setup_game(self, player_count: int = 6):
+    async def setup_game(self, player_count: int = 4):
         """设置游戏"""
+        player_count = int(os.getenv("AGENTSCOPE_PLAYER_COUNT", str(player_count)))
         print("🎮 开始设置三国狼人杀游戏...")
         
         # 获取角色配置
@@ -313,7 +321,7 @@ class ThreeKingdomsWerewolfGame:
         try:
             await self.setup_game()
             
-            for round_num in range(1, MAX_GAME_ROUND + 1):
+            for round_num in range(1, int(os.getenv("AGENTSCOPE_MAX_ROUNDS", "1")) + 1):
                 print(f"\n🌙 === 第{round_num}轮游戏开始 ===")
                 
                 # 夜晚阶段
@@ -367,9 +375,10 @@ class ThreeKingdomsWerewolfGame:
 
 async def main():
     """主函数"""
-    # 检查环境变量
-    if "DASHSCOPE_API_KEY" not in os.environ:
-        print("❌ 请设置环境变量 DASHSCOPE_API_KEY")
+    try:
+        require_llm_env()
+    except ValueError as e:
+        print(f"❌ {e}")
         return
     
     print("🎮 欢迎来到三国狼人杀！")

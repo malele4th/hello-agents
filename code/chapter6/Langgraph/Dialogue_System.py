@@ -6,18 +6,21 @@
 """
 
 import asyncio
+import os
+import sys
+from pathlib import Path
 from typing import TypedDict, Annotated
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, START, END
 from langgraph.graph.message import add_messages
 from langgraph.checkpoint.memory import InMemorySaver
-import os
-from dotenv import load_dotenv
 from tavily import TavilyClient
 
-# 加载环境变量
-load_dotenv()
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from load_env import require_llm_env
+
+env = require_llm_env()
 
 # 定义状态结构
 class SearchState(TypedDict):
@@ -30,14 +33,24 @@ class SearchState(TypedDict):
 
 # 初始化模型和Tavily客户端
 llm = ChatOpenAI(
-    model=os.getenv("LLM_MODEL_ID", "gpt-4o-mini"),
-    api_key=os.getenv("LLM_API_KEY"),
-    base_url=os.getenv("LLM_BASE_URL", "https://api.openai.com/v1"),
+    model=env["model"],
+    api_key=env["api_key"],
+    base_url=env["base_url"],
     temperature=0.7
 )
 
 # 初始化Tavily客户端
-tavily_client = TavilyClient(api_key=os.getenv("TAVILY_API_KEY"))
+tavily_client = TavilyClient(api_key=env["tavily_api_key"])
+
+SEARCH_ASSISTANT_SYSTEM = "你是一个智能搜索助手，擅长理解用户问题、提炼搜索关键词，并基于搜索结果给出准确、结构清晰的回答。"
+
+
+def invoke_llm(system: str, user: str):
+    """调用 LLM，兼容仅支持 user 消息的 OpenAI 兼容接口（如 MiniMax）。"""
+    return llm.invoke([
+        SystemMessage(content=system),
+        HumanMessage(content=user),
+    ])
 
 def understand_query_node(state: SearchState) -> SearchState:
     """步骤1：理解用户查询并生成搜索关键词"""
@@ -59,7 +72,7 @@ def understand_query_node(state: SearchState) -> SearchState:
 理解：[用户需求总结]
 搜索词：[最佳搜索关键词]"""
 
-    response = llm.invoke([SystemMessage(content=understand_prompt)])
+    response = invoke_llm(SEARCH_ASSISTANT_SYSTEM, understand_prompt)
     
     # 提取搜索关键词
     response_text = response.content
@@ -141,7 +154,7 @@ def generate_answer_node(state: SearchState) -> SearchState:
 
 请提供一个有用的回答，并说明这是基于已有知识的回答。"""
         
-        response = llm.invoke([SystemMessage(content=fallback_prompt)])
+        response = invoke_llm(SEARCH_ASSISTANT_SYSTEM, fallback_prompt)
         
         return {
             "final_answer": response.content,
@@ -164,7 +177,7 @@ def generate_answer_node(state: SearchState) -> SearchState:
 4. 回答要结构清晰、易于理解
 5. 如果搜索结果不够完整，请说明并提供补充建议"""
 
-    response = llm.invoke([SystemMessage(content=answer_prompt)])
+    response = invoke_llm(SEARCH_ASSISTANT_SYSTEM, answer_prompt)
     
     return {
         "final_answer": response.content,
@@ -196,13 +209,39 @@ def create_search_assistant():
 async def main():
     """主函数：运行智能搜索助手"""
     
-    # 检查API密钥
-    if not os.getenv("TAVILY_API_KEY"):
-        print("❌ 错误：请在.env文件中配置TAVILY_API_KEY")
+    if not env["tavily_api_key"]:
+        print("❌ 错误：请配置 TAVILY_API_KEY")
         return
     
     app = create_search_assistant()
+    demo_query = os.getenv("LANGGRAPH_DEMO_QUERY", "LangGraph 是什么？")
     
+    if os.getenv("LANGGRAPH_DEMO", "1") == "1":
+        print("🔍 智能搜索助手演示模式启动...")
+        config = {"configurable": {"thread_id": "search-demo"}}
+        initial_state = {
+            "messages": [HumanMessage(content=demo_query)],
+            "user_query": "",
+            "search_query": "",
+            "search_results": "",
+            "final_answer": "",
+            "step": "start",
+        }
+        print(f"🤔 演示问题: {demo_query}\n")
+        async for output in app.astream(initial_state, config=config):
+            for node_name, node_output in output.items():
+                if "messages" in node_output and node_output["messages"]:
+                    latest_message = node_output["messages"][-1]
+                    if isinstance(latest_message, AIMessage):
+                        if node_name == "understand":
+                            print(f"🧠 理解阶段: {latest_message.content}")
+                        elif node_name == "search":
+                            print(f"🔍 搜索阶段: {latest_message.content}")
+                        elif node_name == "answer":
+                            print(f"\n💡 最终回答:\n{latest_message.content}")
+        print("\n✅ LangGraph 演示完成")
+        return
+
     print("🔍 智能搜索助手启动！")
     print("我会使用Tavily API为您搜索最新、最准确的信息")
     print("支持各种问题：新闻、技术、知识问答等")

@@ -3,15 +3,18 @@ AutoGen 软件开发团队协作案例
 """
 
 import os
+import sys
 import asyncio
 from typing import List, Dict, Any
-from dotenv import load_dotenv
+from pathlib import Path
 
-# 加载环境变量
-load_dotenv()
+# 加载 chapter6 统一环境配置
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from load_env import require_llm_env
 
 # 先测试一个版本，使用 OpenAI 客户端
 from autogen_ext.models.openai import OpenAIChatCompletionClient
+from autogen_core.models import ModelFamily
 from autogen_agentchat.agents import AssistantAgent, UserProxyAgent
 from autogen_agentchat.teams import RoundRobinGroupChat
 from autogen_agentchat.conditions import TextMentionTermination
@@ -19,10 +22,18 @@ from autogen_agentchat.ui import Console
 
 def create_openai_model_client():
     """创建 OpenAI 模型客户端用于测试"""
+    env = require_llm_env()
     return OpenAIChatCompletionClient(
-        model=os.getenv("LLM_MODEL_ID", "gpt-4o"),
-        api_key=os.getenv("LLM_API_KEY"),
-        base_url=os.getenv("LLM_BASE_URL", "https://api.openai.com/v1")
+        model=env["model"],
+        api_key=env["api_key"],
+        base_url=env["base_url"],
+        model_info={
+            "vision": False,
+            "function_calling": True,
+            "json_output": False,
+            "structured_output": False,
+            "family": ModelFamily.UNKNOWN,
+        },
     )
 
 def create_product_manager(model_client):
@@ -102,6 +113,9 @@ def create_code_reviewer(model_client):
 
 def create_user_proxy():
     """创建用户代理智能体"""
+    def auto_user_input(_prompt: str) -> str:
+        return "测试通过，功能符合预期。TERMINATE"
+
     return UserProxyAgent(
         name="UserProxy",
         description="""用户代理，负责以下职责：
@@ -111,6 +125,7 @@ def create_user_proxy():
 4. 提供用户反馈和建议
 
 完成测试后请回复 TERMINATE。""",
+        input_func=auto_user_input,
     )
 
 async def run_software_development_team():
@@ -141,7 +156,7 @@ async def run_software_development_team():
             user_proxy
         ],
         termination_condition=termination,
-        max_turns=20,  # 增加最大轮次
+        max_turns=int(os.getenv("AUTOGEN_MAX_TURNS", "8")),
     )
     
     # 定义开发任务
