@@ -1,4 +1,5 @@
 # test_simple_agent.py
+import os
 from dotenv import load_dotenv
 from hello_agents import HelloAgentsLLM, ToolRegistry
 from hello_agents.tools import CalculatorTool
@@ -7,8 +8,19 @@ from my_simple_agent import MySimpleAgent
 # 加载环境变量
 load_dotenv()
 
+# 优先 LLM_*，兼容 OPENAI_* / CORECODER_MODEL（~/.zshrc）
+api_key = os.getenv("LLM_API_KEY") or os.getenv("OPENAI_API_KEY")
+base_url = os.getenv("LLM_BASE_URL") or os.getenv("OPENAI_BASE_URL")
+model = os.getenv("LLM_MODEL_ID") or os.getenv("CORECODER_MODEL")
+
+if not all([api_key, base_url, model]):
+    raise SystemExit(
+        "缺少 LLM 配置。请设置 LLM_API_KEY/LLM_BASE_URL/LLM_MODEL_ID，"
+        "或 OPENAI_API_KEY/OPENAI_BASE_URL/CORECODER_MODEL。"
+    )
+
 # 创建LLM实例
-llm = HelloAgentsLLM()
+llm = HelloAgentsLLM(model=model, api_key=api_key, base_url=base_url)
 
 # 测试1：基础对话Agent（无工具）
 print("=== 测试1：基础对话 ===")

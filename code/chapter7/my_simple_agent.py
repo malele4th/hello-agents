@@ -3,6 +3,11 @@ from typing import Optional, Iterator
 from hello_agents import SimpleAgent, HelloAgentsLLM, Config, Message
 import re
 
+
+def _response_text(response) -> str:
+    """兼容 hello-agents 1.0+ 的 LLMResponse 与旧版 str 返回值。"""
+    return response.content if hasattr(response, "content") else str(response)
+
 class MySimpleAgent(SimpleAgent):
     """
     重写的简单对话Agent
@@ -45,7 +50,7 @@ class MySimpleAgent(SimpleAgent):
 
         # 如果没有启用工具调用，使用简单对话逻辑
         if not self.enable_tool_calling:
-            response = self.llm.invoke(messages, **kwargs)
+            response = _response_text(self.llm.invoke(messages, **kwargs))
             self.add_message(Message(input_text, "user"))
             self.add_message(Message(response, "assistant"))
             print(f"✅ {self.name} 响应完成")
@@ -85,7 +90,7 @@ class MySimpleAgent(SimpleAgent):
 
         while current_iteration < max_tool_iterations:
             # 调用LLM
-            response = self.llm.invoke(messages, **kwargs)
+            response = _response_text(self.llm.invoke(messages, **kwargs))
 
             # 检查是否有工具调用
             tool_calls = self._parse_tool_calls(response)
@@ -118,7 +123,7 @@ class MySimpleAgent(SimpleAgent):
 
         # 如果超过最大迭代次数，获取最后一次回答
         if current_iteration >= max_tool_iterations and not final_response:
-            final_response = self.llm.invoke(messages, **kwargs)
+            final_response = _response_text(self.llm.invoke(messages, **kwargs))
 
         # 保存到历史记录
         self.add_message(Message(input_text, "user"))

@@ -75,6 +75,11 @@ class MyReActAgent(ReActAgent):
             # 2. 调用LLM
             messages = [{"role": "user", "content": prompt}]
             response_text = self.llm.invoke(messages, **kwargs)
+            response_text = (
+                response_text.content
+                if hasattr(response_text, "content")
+                else str(response_text)
+            )
 
             # 3. 解析输出
             thought, action = self._parse_output(response_text)
