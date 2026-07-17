@@ -1,0 +1,7 @@
+[
+  {
+    "id": 0,
+    "text": "Large Language Model (LLM) is a deep learning NLP model.\nTransformer core components: Self-Attention, Multi-Head Attention,\nFeed Forward Network, and Positional Encoding.\nTraining usually includes pretraining and fine-tuning stages.\nAttention helps capture long-range dependencies in sequences.\n大语言模型是一种基于深度学习的自然语言处理模型。\nTransformer架构核心组件包括自注意力、多头注意力、前馈网络和位置编码。",
+    "source": "sample_llm.pdf"
+  }
+]

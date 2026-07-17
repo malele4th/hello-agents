@@ -1,0 +1,22 @@
+[
+  {
+    "id": "df613244-2cc8-4fa7-91ca-eb36fb956bca",
+    "content": "加载了文档《sample_llm.pdf》",
+    "memory_type": "episodic",
+    "importance": 0.9,
+    "concept": "general",
+    "event_type": "",
+    "session_id": "",
+    "created_at": "2026-07-17T17:54:56.728902"
+  },
+  {
+    "id": "8a628c7e-82c1-4769-b7ce-7f4ff28bb4c4",
+    "content": "提问: Transformer架构有哪些核心组件？",
+    "memory_type": "working",
+    "importance": 0.5,
+    "concept": "general",
+    "event_type": "",
+    "session_id": "",
+    "created_at": "2026-07-17T17:55:18.880610"
+  }
+]
