@@ -1,11 +1,10 @@
 """多智能体旅行规划系统"""
 
 import json
-from typing import Dict, Any, List
 from hello_agents import SimpleAgent
 from hello_agents.tools import MCPTool
 from ..services.llm_service import get_llm
-from ..models.schemas import TripRequest, TripPlan, DayPlan, Attraction, Meal, WeatherInfo, Location, Hotel
+from ..models.schemas import TripRequest, TripPlan, DayPlan, Attraction, Meal, Location
 from ..config import get_settings
 
 # ============ Agent提示词 ============

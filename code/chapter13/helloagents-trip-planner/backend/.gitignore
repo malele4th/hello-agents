@@ -40,6 +40,11 @@ ENV/
 # 日志
 *.log
 
+# HelloAgents 运行时目录（自动生成，非业务代码）
+memory/
+skills/
+tool-output/
+
 # 测试
 .pytest_cache/
 .coverage

@@ -4,7 +4,6 @@ from fastapi import APIRouter, HTTPException
 from ...models.schemas import (
     TripRequest,
     TripPlanResponse,
-    ErrorResponse
 )
 from ...agents.trip_planner_agent import get_trip_planner_agent
 

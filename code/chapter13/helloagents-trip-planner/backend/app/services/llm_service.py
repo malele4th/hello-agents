@@ -29,8 +29,6 @@ def get_llm() -> HelloAgentsLLM:
         provider = "auto"
         if base_url and "deepseek.com" in base_url.lower():
             provider = "deepseek"
-        elif base_url and "minimaxi.com" in base_url.lower():
-            provider = "auto"
 
         _llm_instance = HelloAgentsLLM(
             model=model,
@@ -47,9 +45,3 @@ def get_llm() -> HelloAgentsLLM:
         print(f"   API Key 后缀: ...{(_llm_instance.api_key or '')[-4:]}")
 
     return _llm_instance
-
-
-def reset_llm():
-    """重置LLM实例(用于测试或重新配置)"""
-    global _llm_instance
-    _llm_instance = None

@@ -37,10 +37,10 @@ helloagents-trip-planner/
 │   │   │   ├── main.py
 │   │   │   └── routes/
 │   │   │       ├── trip.py
-│   │   │       └── map.py
+│   │   │       └── poi.py
 │   │   ├── services/          # 服务层
-│   │   │   ├── amap_service.py
-│   │   │   └── llm_service.py
+│   │   │   ├── llm_service.py
+│   │   │   └── unsplash_service.py
 │   │   ├── models/            # 数据模型
 │   │   │   └── schemas.py
 │   │   └── config.py          # 配置管理
@@ -49,10 +49,12 @@ helloagents-trip-planner/
 │   └── .gitignore
 ├── frontend/                   # 前端应用
 │   ├── src/
-│   │   ├── components/        # Vue组件
 │   │   ├── services/          # API服务
 │   │   ├── types/             # TypeScript类型
-│   │   └── views/             # 页面视图
+│   │   ├── views/             # 页面视图
+│   │   ├── App.vue
+│   │   ├── main.ts
+│   │   └── env.d.ts
 │   ├── package.json
 │   └── vite.config.ts
 └── README.md
@@ -187,9 +189,9 @@ Agent可以自动调用以下高德地图MCP工具:
 
 主要端点:
 - `POST /api/trip/plan` - 生成旅行计划
-- `GET /api/map/poi` - 搜索POI
-- `GET /api/map/weather` - 查询天气
-- `POST /api/map/route` - 规划路线
+- `GET /api/trip/health` - 旅行规划服务健康检查
+- `GET /api/poi/photo` - 获取景点配图
+- `GET /health` - 服务健康检查
 
 ## 🤝 贡献指南
 
