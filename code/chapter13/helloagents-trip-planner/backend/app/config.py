@@ -6,14 +6,17 @@ from typing import List
 from pydantic_settings import BaseSettings
 from dotenv import load_dotenv
 
-# 加载环境变量
-# 首先尝试加载当前目录的.env
-load_dotenv()
+# 加载环境变量：项目 backend/.env 优先于 shell 中的全局 OPENAI_* 等配置
+_backend_env = Path(__file__).resolve().parent.parent / ".env"
+if _backend_env.exists():
+    load_dotenv(_backend_env, override=True)
+else:
+    load_dotenv(override=True)
 
-# 然后尝试加载HelloAgents的.env(如果存在)
+# 然后尝试加载HelloAgents的.env(如果存在, 不覆盖项目配置)
 helloagents_env = Path(__file__).parent.parent.parent.parent / "HelloAgents" / ".env"
 if helloagents_env.exists():
-    load_dotenv(helloagents_env, override=False)  # 不覆盖已有的环境变量
+    load_dotenv(helloagents_env, override=False)
 
 
 class Settings(BaseSettings):

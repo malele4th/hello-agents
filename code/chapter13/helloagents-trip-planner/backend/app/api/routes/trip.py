@@ -75,8 +75,13 @@ async def health_check():
         return {
             "status": "healthy",
             "service": "trip-planner",
-            "agent_name": agent.agent.name,
-            "tools_count": len(agent.agent.list_tools())
+            "agents": [
+                agent.attraction_agent.name,
+                agent.weather_agent.name,
+                agent.hotel_agent.name,
+                agent.planner_agent.name,
+            ],
+            "tools_count": len(agent.attraction_agent.list_tools())
         }
     except Exception as e:
         raise HTTPException(

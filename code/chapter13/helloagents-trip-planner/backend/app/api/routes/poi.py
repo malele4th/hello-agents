@@ -89,31 +89,26 @@ async def search_poi(keywords: str, city: str = "北京"):
 @router.get(
     "/photo",
     summary="获取景点图片",
-    description="根据景点名称从Unsplash获取图片"
+    description="根据景点名称获取配图（优先维基百科，Unsplash 兜底）"
 )
-async def get_attraction_photo(name: str):
+async def get_attraction_photo(name: str, city: str = ""):
     """
     获取景点图片
 
     Args:
         name: 景点名称
+        city: 城市（可选，提升 Unsplash 检索准确度）
 
     Returns:
         图片URL
     """
     try:
         unsplash_service = get_unsplash_service()
-
-        # 搜索景点图片
-        photo_url = unsplash_service.get_photo_url(f"{name} China landmark")
-
-        if not photo_url:
-            # 如果没找到,尝试只用景点名称搜索
-            photo_url = unsplash_service.get_photo_url(name)
+        photo_url = unsplash_service.get_attraction_photo(name, city=city)
 
         return {
             "success": True,
-            "message": "获取图片成功",
+            "message": "获取图片成功" if photo_url else "未找到匹配图片",
             "data": {
                 "name": name,
                 "photo_url": photo_url
