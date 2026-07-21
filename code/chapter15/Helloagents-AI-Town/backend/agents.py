@@ -16,6 +16,20 @@ from logger import (
     log_generating_response, log_npc_response, log_analyzing_affinity,
     log_affinity_change, log_memory_saved, log_dialogue_end, log_info
 )
+from config import settings
+
+
+def create_llm() -> HelloAgentsLLM:
+    """使用项目 .env 显式初始化 LLM，避免被全局 OPENAI_API_KEY 抢占。"""
+    provider = (settings.LLM_PROVIDER or "deepseek").strip()
+    kwargs = {
+        "model": settings.LLM_MODEL_ID,
+        "api_key": settings.LLM_API_KEY,
+        "base_url": settings.LLM_BASE_URL,
+        "provider": provider,
+    }
+    return HelloAgentsLLM(**kwargs)
+
 
 # NPC角色配置
 NPC_ROLES = {
@@ -91,7 +105,7 @@ class NPCAgentManager:
         print("🤖 正在初始化NPC Agent系统...")
 
         try:
-            self.llm = HelloAgentsLLM()
+            self.llm = create_llm()
             print("✅ LLM初始化成功")
         except Exception as e:
             print(f"❌ LLM初始化失败: {e}")
@@ -153,17 +167,30 @@ class NPCAgentManager:
             decay_factor=0.95  # 时间衰减系数
         )
 
-        # 创建记忆管理器
-        memory_manager = MemoryManager(
-            config=memory_config,
-            user_id=npc_name,  # 使用NPC名字作为user_id
-            enable_working=True,  # 启用工作记忆 (短期)
-            enable_episodic=True,  # 启用情景记忆 (长期)
-            enable_semantic=False,  # 不需要语义记忆
-            enable_perceptual=False  # 不需要感知记忆
-        )
-
-        print(f"  💾 {npc_name}的记忆系统已初始化 (存储路径: {memory_dir})")
+        # 创建记忆管理器（情景记忆依赖 Qdrant；未配置或不可用时仅用工作记忆）
+        enable_episodic = bool(os.getenv("QDRANT_URL"))
+        try:
+            memory_manager = MemoryManager(
+                config=memory_config,
+                user_id=npc_name,  # 使用NPC名字作为user_id
+                enable_working=True,  # 启用工作记忆 (短期)
+                enable_episodic=enable_episodic,  # 启用情景记忆 (长期)
+                enable_semantic=False,  # 不需要语义记忆
+                enable_perceptual=False  # 不需要感知记忆
+            )
+            mode = "工作+情景" if enable_episodic else "仅工作记忆"
+            print(f"  💾 {npc_name}的记忆系统已初始化 ({mode}, 路径: {memory_dir})")
+        except Exception as e:
+            print(f"  ⚠️  {npc_name}情景记忆不可用({e})，回退为仅工作记忆")
+            memory_manager = MemoryManager(
+                config=memory_config,
+                user_id=npc_name,
+                enable_working=True,
+                enable_episodic=False,
+                enable_semantic=False,
+                enable_perceptual=False,
+            )
+            print(f"  💾 {npc_name}的记忆系统已初始化 (仅工作记忆, 路径: {memory_dir})")
 
         return memory_manager
     

@@ -133,7 +133,9 @@ class DeepResearchAgent:
             state.todo_items = [self.planner.create_fallback_task(state)]
 
         for task in state.todo_items:
-            self._execute_task(state, task, emit_stream=False)
+            # _execute_task 是生成器，必须消费才会真正执行搜索/总结
+            for _ in self._execute_task(state, task, emit_stream=False):
+                pass
 
         report = self.reporting.generate_report(state)
         self._drain_tool_events(state)

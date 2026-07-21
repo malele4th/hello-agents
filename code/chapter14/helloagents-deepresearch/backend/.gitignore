@@ -1,0 +1,12 @@
+.env
+.env.local
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+notes/
+memory/
+skills/
+tool-output/
+*.egg-info/
+.DS_Store

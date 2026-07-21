@@ -11,6 +11,18 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'HelloAgents'))
 
 from hello_agents import HelloAgentsLLM
 from agents import NPC_ROLES
+from config import settings
+
+
+def create_llm() -> HelloAgentsLLM:
+    """使用项目 .env 显式初始化 LLM。"""
+    return HelloAgentsLLM(
+        model=settings.LLM_MODEL_ID,
+        api_key=settings.LLM_API_KEY,
+        base_url=settings.LLM_BASE_URL,
+        provider=(settings.LLM_PROVIDER or "deepseek").strip(),
+    )
+
 
 class NPCBatchGenerator:
     """批量生成NPC对话的生成器
@@ -23,7 +35,7 @@ class NPCBatchGenerator:
         print("🎨 正在初始化批量对话生成器...")
         
         try:
-            self.llm = HelloAgentsLLM()
+            self.llm = create_llm()
             self.enabled = True
             print("✅ 批量生成器初始化成功")
         except Exception as e:
